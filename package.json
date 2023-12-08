@@ -1,0 +1,17 @@
+{
+	"name": "com.mysticeggs.objectmovehelper",
+	"version": "1.0.0",
+	"displayName": "Object Move Helper",
+	"description": "An util that adds a new option to the context menu in the Hierarchy tab that allows you to to quickly move the selected objects to a new parent",
+	"unity": "2018.3",
+	"keywords": [
+		"hierarchy",
+		"gameObject",
+		"move",
+		"search"
+	],
+	"author": {
+		"name": "MysticEggs",
+		"email": "mifozski@gmail.com"
+	}
+}
