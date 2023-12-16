@@ -40,7 +40,7 @@ namespace MysticEggs
 				var path = AssetDatabase.GUIDToAssetPath(asset);
 				var assetName = Path.GetFileName(path);
 				var error = AssetDatabase.MoveAsset(path, $"Assets/{folderPath}/{assetName}");
-				if (error)
+				if (string.IsNullOrEmpty(error))
 				{
 					Debug.LogError("Error while moving asset " + assetName + ": " + error);
 				}
