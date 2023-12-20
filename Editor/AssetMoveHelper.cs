@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
@@ -11,7 +12,7 @@ namespace MysticEggs
 	{
 		[SerializeField] TreeViewState m_TreeViewState;
 
-		FolderSearcherView m_FolderSearchView;
+		FolderSearcherView _folderSearchView;
 
 		const string SEARCH_FIELD_ID = "SearchField";
 
@@ -24,23 +25,25 @@ namespace MysticEggs
 				m_TreeViewState = new TreeViewState();
 			}
 
-			m_FolderSearchView = new FolderSearcherView(m_TreeViewState);
+			_folderSearchView = new FolderSearcherView(m_TreeViewState);
 
-			m_FolderSearchView.OnSelectedFolder += HandleSelectedFolder;
+			_folderSearchView.OnSelectedFolder += HandleSelectedFolder;
 		}
 
 		private void HandleSelectedFolder(string folderPath)
 		{
+			Close();
+			
 			var selectedAssets = Selection.assetGUIDs;
 
-			Debug.Log($"Moving {selectedAssets.Length} object(s) to " + folderPath);
+			Debug.Log($"Moving {selectedAssets.Length} asset(s) to " + folderPath);
 
 			foreach (var asset in selectedAssets)
 			{
 				var path = AssetDatabase.GUIDToAssetPath(asset);
 				var assetName = Path.GetFileName(path);
 				var error = AssetDatabase.MoveAsset(path, $"Assets/{folderPath}/{assetName}");
-				if (string.IsNullOrEmpty(error))
+				if (!string.IsNullOrEmpty(error))
 				{
 					Debug.LogError("Error while moving asset " + assetName + ": " + error);
 				}
@@ -50,40 +53,40 @@ namespace MysticEggs
 
 		void OnGUI()
 		{
-			GUI.SetNextControlName(SEARCH_FIELD_ID);
-			var searchInputRect = new Rect(10, 10, 200, 20);
-			searchString = GUI.TextField(new Rect(10, 10, 200, 20), searchString, 25);
+			searchString = Utils.DrawSearchInput(searchString, SEARCH_FIELD_ID);
 
-			// Draw Plcaeholder
-			if (string.IsNullOrEmpty(searchString)) {
-				GUIStyle style = new GUIStyle
-				{
-					alignment = TextAnchor.UpperLeft,
-					padding = new RectOffset(3, 0, 2, 0),
-					fontStyle = FontStyle.Italic,
-					normal =
-					{
-						textColor = Color.grey
-					}
-				};
-				EditorGUI.LabelField(searchInputRect, "Search Folders", style);
-			}
-
-			if (_inputNeedsFocus)
+			if (_inputNeedsFocus || (Event.current.keyCode != KeyCode.None && Event.current.keyCode != KeyCode.Return && Event.current.keyCode != KeyCode.KeypadEnter && Event.current.keyCode != KeyCode.UpArrow && Event.current.keyCode != KeyCode.DownArrow))
 			{
 				_inputNeedsFocus = false;
 				GUI.FocusControl(SEARCH_FIELD_ID);
 			}
 
-			var update = GUI.Button(new Rect(250, 10, 100, 20), "Move");
-			if (update)
+			if (Event.current.keyCode == KeyCode.DownArrow)
 			{
-				m_FolderSearchView.Reload();
+				if (GUI.GetNameOfFocusedControl() == SEARCH_FIELD_ID)
+				{
+					_folderSearchView.SetFocus();
+				}
 			}
 
-			m_FolderSearchView.searchString = searchString;
+			_folderSearchView.searchString = searchString;
 
-			m_FolderSearchView.OnGUI(new Rect(10, 20 + 20, position.width, position.height));
+			_folderSearchView.OnGUI(new Rect(10, 20 + 20, position.width, position.height));
+
+			var move = GUI.Button(new Rect(250, 10, 100, 20), "Move");
+
+			if (move || Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter)
+			{
+				var selectedItems = _folderSearchView.GetSelection();
+				if (selectedItems.Count > 0)
+				{
+					var selectedFolder = _folderSearchView.GetSelectedFolder();
+					if (!string.IsNullOrEmpty(selectedFolder))
+					{
+						HandleSelectedFolder(selectedFolder);
+					}
+				}
+			}
 		}
 
 		[MenuItem("Assets/Move to... %m", false)]
@@ -135,11 +138,10 @@ namespace MysticEggs
 
 				_dirPathsPerId.Add(id, newPath);
 
-
 				allItems.Add(new DirItem(
 					id,
 					depth,
-					dir,
+					newPath,
 					newPath
 				));
 
@@ -149,37 +151,27 @@ namespace MysticEggs
 
 		protected override void SelectionChanged(IList<int> selectedIds)
 		{
-			foreach (var id in selectedIds)
-			{
-				Debug.Log(_dirPathsPerId[id]);
-			}
 			base.SelectionChanged(selectedIds);
 		}
 
 		protected override void RowGUI(RowGUIArgs args)
 		{
-			var item = _dirPathsPerId[args.item.id];
-			if (item == null)
-			{
-				return;
-			}
-
-			var iconRect = args.rowRect;
-			iconRect.width = 16f;
-
-			var labelRect = args.rowRect;
-			var indent = iconRect.x + iconRect.width;
-			labelRect.x += indent;
-			labelRect.width -= indent;
-
-			var labelStyle = GUI.skin.label;
-			labelStyle.fontSize = 15;
-			EditorGUI.LabelField(labelRect, item, labelStyle);
+			Utils.DrawTreeItem(args.rowRect, args.item.displayName);
 		}
 
 		protected override void DoubleClickedItem(int id)
 		{
 			OnSelectedFolder(_dirPathsPerId[id]);
+		}
+
+		public string GetSelectedFolder()
+		{
+			var selectedItems = GetSelection();
+			if (selectedItems.Count > 0)
+			{
+				return _dirPathsPerId[selectedItems.First()];
+			}
+			return null;
 		}
 
 		static Dictionary<int, string> _dirPathsPerId = new Dictionary<int, string>();

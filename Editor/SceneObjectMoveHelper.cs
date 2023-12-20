@@ -9,7 +9,7 @@ using UnityEditor.IMGUI.Controls;
 
 namespace MysticEggs
 {
-	public static class Test
+	public static class SceneObjectMoveHelper
 	{	
 		[MenuItem("GameObject/Move Helper/Move Out of Parent", false, 0)]
 		static void MoveOutOfParent()
@@ -80,24 +80,7 @@ namespace MysticEggs
 				Close();
 			}
 
-			GUI.SetNextControlName(SEARCH_FIELD_ID);
-			var searchInputRect = new Rect(10, 10, 200, 20);
-			searchString = GUI.TextField(new Rect(10, 10, 200, 20), searchString, 25);
-
-			// Draw Plcaeholder
-			if (string.IsNullOrEmpty(searchString)) {
-				GUIStyle style = new GUIStyle
-				{
-					alignment = TextAnchor.UpperLeft,
-					padding = new RectOffset(3, 0, 2, 0),
-					fontStyle = FontStyle.Italic,
-					normal =
-					{
-						textColor = Color.grey
-					}
-				};
-				EditorGUI.LabelField(searchInputRect, "Search Scene Objects", style);
-			}
+			searchString = Utils.DrawSearchInput(searchString, SEARCH_FIELD_ID);
 			
 			if (_inputNeedsFocus || (Event.current.keyCode != KeyCode.None && Event.current.keyCode != KeyCode.Return && Event.current.keyCode != KeyCode.KeypadEnter && Event.current.keyCode != KeyCode.UpArrow && Event.current.keyCode != KeyCode.DownArrow))
 			{
@@ -121,15 +104,22 @@ namespace MysticEggs
 
 			if (move || Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter)
 			{
-				var selectedItems = _objectSearchView.GetSelection();
-				if (selectedItems.Count > 0)
+				var selectedTrasnform = _objectSearchView.GetSelectedTransform();
+				if (selectedTrasnform)
 				{
-					var selectedTrasnform = _objectSearchView.GetSelectedTransform();
-					if (selectedTrasnform)
-					{
-						HandleSelectedNewParent(selectedTrasnform);
-					}
+					HandleSelectedNewParent(selectedTrasnform);
 				}
+			}
+
+			var moveToSceneRoot = GUI.Button(new Rect(370, 10, 150, 20), "Move to Scene Root");
+			if (moveToSceneRoot)
+			{
+				foreach (var obj in selectedObjects)
+				{
+					obj.transform.parent = null;
+				}
+
+				Close();
 			}
 		}
 
@@ -224,17 +214,7 @@ namespace MysticEggs
 
 		protected override void RowGUI(RowGUIArgs args)
 		{
-			var item = _transformsPerId[args.item.id];
-			if (item == null)
-			{
-				return;
-			}
-
-			var labelRect = args.rowRect;
-
-			var labelStyle = GUI.skin.label;
-			labelStyle.fontSize = 15;
-			EditorGUI.LabelField(labelRect, args.item.displayName, labelStyle);
+			Utils.DrawTreeItem(args.rowRect, args.item.displayName);
 		}
 
 		protected override bool DoesItemMatchSearch(TreeViewItem item, string search)
