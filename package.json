@@ -1,6 +1,6 @@
 {
   "name": "com.mysticeggs.objectmovehelper",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "displayName": "Object Move Helper",
   "description": "An util to quickly move an asset or a scene object to a desired folder or a new parent.",
   "unity": "2018.3",
